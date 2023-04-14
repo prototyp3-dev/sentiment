@@ -84,6 +84,7 @@ handlers = {
 
 
 def main_loop():
+    get_model()
     finish = {"status": "accept"}
     rollup_address = None
 
