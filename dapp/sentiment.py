@@ -1,4 +1,4 @@
-# Copyright 2022 Cartesi Pte. Ltd.
+# Copyright 2023 Cartesi Pte. Ltd.
 #
 # SPDX-License-Identifier: Apache-2.0
 # Licensed under the Apache License, Version 2.0 (the "License"); you may not use
@@ -21,27 +21,55 @@ logger = logging.getLogger(__name__)
 rollup_server = environ.get("ROLLUP_HTTP_SERVER_URL", '')
 logger.info(f"HTTP rollup_server url is {rollup_server}")
 
-_MODEL = None
-def get_model():
-    """
-    Load and cache the model.
-    """
-    global _MODEL
 
-    if _MODEL is None:
-        with open('data/model.pkl', 'rb') as fin:
-            _MODEL = pickle.load(fin)
-
-    return _MODEL
-
-
-def classify_sentiment(text: str) -> str:
+class Model:
     """
-    Perform the inference of a sentiment classifier on a given text.
+    Abstraction for a Machine Learning predictor model.
     """
-    model = get_model()
-    result = model.predict([text])
-    return result[0]
+
+    def __init__(self, filename: str='data/model.pkl'):
+        """
+        Model Initialization
+
+        Parameters
+        ----------
+        filename : str
+            File name for the pickled model
+        """
+        self._filename = filename
+        self._model = None
+
+    def load_model(self):
+        """
+        Load the model from file, if needed
+
+        If the model is already loaded, this function will do nothing. It is
+        therefore safe to call it multiple times.
+        """
+        if self._model is not None:
+            return
+        with open(self._filename, 'rb') as fin:
+            self._model = pickle.load(fin)
+
+    def predict(self, X: str) -> str:
+        """
+        Perform the model inference in a single sample and return the result.
+
+        Parameters
+        ----------
+        X : str
+            input sample
+
+        Returns
+        -------
+        cls : str
+            Output class
+        """
+        self.load_model()
+        result = self._model.predict([X])
+        return result[0]
+
+MODEL = Model()
 
 
 def hex2str(hex):
@@ -61,7 +89,7 @@ def handle_advance(data):
     logger.info("Adding notice")
 
     decoded_data = hex2str(data['payload'])
-    sent = classify_sentiment(decoded_data)
+    sent = MODEL.predict(decoded_data)
     logger.info("Inference of sentiment for '%s' is %s", decoded_data, sent)
     notice = {"payload": str2hex(sent)}
 
@@ -84,7 +112,10 @@ handlers = {
 
 
 def main_loop():
-    get_model()
+    # Explicitly load model duringinitialization so it won't be done during
+    # the processing of an advance_state message
+    MODEL.load_model()
+
     finish = {"status": "accept"}
     rollup_address = None
 
