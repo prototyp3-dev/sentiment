@@ -99,8 +99,13 @@ def handle_advance(data):
 
 def handle_inspect(data):
     logger.info(f"Received inspect request data {data}")
+
+    decoded_data = hex2str(data['payload'])
+    sent = MODEL.predict(decoded_data)
+    logger.info("Inference of sentiment for '%s' is %s", decoded_data, sent)
+    report = {"payload": str2hex(sent)}
+
     logger.info("Adding report")
-    report = {"payload": data["payload"]}
     response = requests.post(rollup_server + "/report", json=report)
     logger.info(f"Received report status {response.status_code}")
     return "accept"
