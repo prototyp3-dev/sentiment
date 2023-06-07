@@ -1,14 +1,15 @@
 # Copyright 2023 Cartesi Pte. Ltd.
 #
 # SPDX-License-Identifier: Apache-2.0
-# Licensed under the Apache License, Version 2.0 (the "License"); you may not use
-# this file except in compliance with the License. You may obtain a copy of the
-# License at http://www.apache.org/licenses/LICENSE-2.0
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software distributed
-# under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-# CONDITIONS OF ANY KIND, either express or implied. See the License for the
-# specific language governing permissions and limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
 
 from os import environ
 import logging
@@ -27,7 +28,7 @@ class Model:
     Abstraction for a Machine Learning predictor model.
     """
 
-    def __init__(self, filename: str='data/model.pkl'):
+    def __init__(self, filename: str = 'data/model.pkl'):
         """
         Model Initialization
 
@@ -69,6 +70,7 @@ class Model:
         result = self._model.predict([X])
         return result[0]
 
+
 MODEL = Model()
 
 
@@ -78,24 +80,28 @@ def hex2str(hex):
     """
     return bytes.fromhex(hex[2:]).decode("utf-8")
 
+
 def str2hex(str):
     """
     Encodes a string as a hex string
     """
     return "0x" + str.encode("utf-8").hex()
 
+
 def handle_advance(data):
     logger.info(f"Received advance request data {data}")
-    logger.info("Adding notice")
 
     decoded_data = hex2str(data['payload'])
     sent = MODEL.predict(decoded_data)
     logger.info("Inference of sentiment for '%s' is %s", decoded_data, sent)
     notice = {"payload": str2hex(sent)}
 
+    logger.info("Adding notice")
     response = requests.post(rollup_server + "/notice", json=notice)
-    logger.info(f"Received notice status {response.status_code} body {response.content}")
+    logger.info(f"Received notice status {response.status_code} "
+                f"body {response.content}")
     return "accept"
+
 
 def handle_inspect(data):
     logger.info(f"Received inspect request data {data}")
@@ -109,6 +115,7 @@ def handle_inspect(data):
     response = requests.post(rollup_server + "/report", json=report)
     logger.info(f"Received report status {response.status_code}")
     return "accept"
+
 
 handlers = {
     "advance_state": handle_advance,
@@ -135,12 +142,14 @@ def main_loop():
             data = rollup_request["data"]
             if "metadata" in data:
                 metadata = data["metadata"]
-                if metadata["epoch_index"] == 0 and metadata["input_index"] == 0:
+                if (metadata["epoch_index"] == 0
+                        and metadata["input_index"] == 0):
                     rollup_address = metadata["msg_sender"]
                     logger.info(f"Captured rollup address: {rollup_address}")
                     continue
             handler = handlers[rollup_request["request_type"]]
             finish["status"] = handler(rollup_request["data"])
+
 
 if __name__ == '__main__':
     main_loop()
